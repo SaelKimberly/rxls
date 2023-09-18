@@ -1,9 +1,12 @@
 # rxls
+
+Shortcut from Read XLS\[X|B\]
+
 Reading both XLSX and XLSB files, fast and memory-safe, with Python, into Polars or Pandas.
 
 # Description
 
-This module provides for you one function: `xl_scan` for reading both .xlsx and .xlsb files.
+This module provides one function: `xl_scan` for reading both .xlsx and .xlsb files.
 
 # Parameters:
 
