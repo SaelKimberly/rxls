@@ -211,7 +211,7 @@ def create_scanner(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     keep_rows: bool = False,
-) -> Iterator[cell]:  # sourcery skip: low-code-quality
+) -> "Iterator[cell]":  # sourcery skip: low-code-quality
     if book_name is None:
         if isinstance(xl_file, str):
             book_name = Path(xl_file).name.rsplit(".", 1)[0]

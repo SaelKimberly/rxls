@@ -19,7 +19,7 @@ class Relationship:
     Target: str
 
     @staticmethod
-    def scan_xml(io: IO[bytes]) -> "list[Relationship]":
+    def scan_xml(io: "IO[bytes]") -> "list[Relationship]":
         rels = []
 
         def rs_handler(tag: str, attr: dict[str, str]):
@@ -34,5 +34,5 @@ class Relationship:
 
         return rels
 
-    def dump_xml(self, io: IO[bytes]):
+    def dump_xml(self, io: "IO[bytes]"):
         io.write(f'<Relationship Id="{self.Id}" Type="{RELS_NS}/{self.Type}" Target="{self.Target}"/>'.encode())

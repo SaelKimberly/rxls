@@ -221,4 +221,5 @@ class BrtXF:
         )
 
 
-_: "RecordProto[BrtXF]" = None
+if typing.TYPE_CHECKING:
+    _: "RecordProto[BrtXF]" = None

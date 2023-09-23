@@ -1,15 +1,9 @@
 import typing
 from collections import deque
-from functools import cache
 from struct import Struct
 
 from recordclass import as_dataclass as _as_dataclass
-
-if typing.TYPE_CHECKING:
-    from typing import Any, Callable, Iterable, NoReturn, Type, TypeVar
-    from typing_extensions import ParamSpec, TypeVarTuple
-    from typing_extensions import Unpack as Un
-    from typing_extensions import dataclass_transform
+from typing_extensions import dataclass_transform
 
 __all__ = [
     "cached",
@@ -33,27 +27,37 @@ __all__ = [
     "Un",
 ]
 
-P = ParamSpec("P")
-T = TypeVar("T")
-Ts = TypeVarTuple("Ts")
 
+if typing.TYPE_CHECKING:
+    from typing import Any, Callable, Iterable, NoReturn, Type, TypeVar
 
-def cached(f: Callable[P, T]) -> Callable[P, T]:
-    raise NotImplementedError()
+    from typing_extensions import ParamSpec, TypeVarTuple
+    from typing_extensions import Unpack as Un
 
+    P = ParamSpec("P")
+    T = TypeVar("T")
+    Ts = TypeVarTuple("Ts")
 
-def exhaust(it: Iterable[T], f: "Callable[[T], Any] | None" = None) -> None:
-    deque(it if f is None else map(f, it), 0)
+    try:
+        from functools import cache
+    except ImportError:
+        from functools import lru_cache as cache
 
+    def cached(f: "Callable[P, T]") -> "Callable[P, T]":
+        raise NotImplementedError()
 
-cached = cache  # type: ignore  # noqa: F811
+    cached = cache  # type: ignore  # noqa: F811
 
-_T = TypeVar("_T")
+else:
+    try:
+        from functools import cache as cached
+    except ImportError:
+        from functools import lru_cache as cached
 
 
 @dataclass_transform()
 def as_dataclass(
-    cls: "Type[_T] | None" = None,
+    cls: "Type[T] | None" = None,
     *,
     use_dict: bool = False,
     use_weakref: bool = False,
@@ -66,7 +70,7 @@ def as_dataclass(
     fast_new: bool = True,
     rename: bool = False,
     gc: bool = False
-) -> Callable[[Type[_T]], Type[_T]]:
+) -> "Callable[[Type[T]], Type[T]]":
     if cls is not None:
         return _as_dataclass(
             use_dict=use_dict,
@@ -82,7 +86,7 @@ def as_dataclass(
             gc=gc,
         )(cls)
 
-    def wrapper(cls: Type[_T]) -> Type[_T]:
+    def wrapper(cls: "Type[T]") -> "Type[T]":
         return _as_dataclass(
             use_dict=use_dict,
             use_weakref=use_weakref,
@@ -102,51 +106,55 @@ def as_dataclass(
     return wrapper
 
 
-def struct_u(s: "str | Struct") -> Callable[[Callable[[bytes], tuple[Un[Ts]]]], Callable[[bytes], tuple[Un[Ts]]]]:
-    def wrapper(f: Callable[[bytes], tuple[Un[Ts]]]) -> Callable[[bytes], tuple[Un[Ts]]]:
+def exhaust(it: "Iterable[T]", f: "Callable[[T], Any] | None" = None) -> None:
+    deque(it if f is None else map(f, it), 0)
+
+
+def struct_u(s: "str | Struct") -> "Callable[[Callable[[bytes], tuple[Un[Ts]]]], Callable[[bytes], tuple[Un[Ts]]]]":
+    def wrapper(f: "Callable[[bytes], tuple[Un[Ts]]]") -> "Callable[[bytes], tuple[Un[Ts]]]":
         return Struct(s).unpack if isinstance(s, str) else s.unpack  # type: ignore
 
     return wrapper
 
 
-def struct_p(s: "str | Struct") -> Callable[[Callable[[Un[Ts]], bytes]], Callable[[Un[Ts]], bytes]]:
-    def wrapper(f: Callable[[Un[Ts]], bytes]) -> Callable[[Un[Ts]], bytes]:
+def struct_p(s: "str | Struct") -> "Callable[[Callable[[Un[Ts]], bytes]], Callable[[Un[Ts]], bytes]]":
+    def wrapper(f: "Callable[[Un[Ts]], bytes]") -> "Callable[[Un[Ts]], bytes]":
         return Struct(s).pack if isinstance(s, str) else s.pack  # type: ignore
 
     return wrapper
 
 
-def end_decl() -> NoReturn:
+def end_decl() -> "NoReturn":
     raise NotImplementedError()
 
 
 @struct_u("<Q")
-def u8_u(b: bytes) -> tuple[int]:
+def u8_u(b: bytes) -> "tuple[int]":
     end_decl()
 
 
 @struct_u("<I")
-def u4_u(b: bytes) -> tuple[int]:
+def u4_u(b: bytes) -> "tuple[int]":
     end_decl()
 
 
 @struct_u("<H")
-def u2_u(b: bytes) -> tuple[int]:
+def u2_u(b: bytes) -> "tuple[int]":
     end_decl()
 
 
 @struct_u("<B")
-def u1_u(b: bytes) -> tuple[int]:
+def u1_u(b: bytes) -> "tuple[int]":
     end_decl()
 
 
 @struct_u("<f")
-def f4_u(b: bytes) -> tuple[float]:
+def f4_u(b: bytes) -> "tuple[float]":
     end_decl()
 
 
 @struct_u("<d")
-def f8_u(b: bytes) -> tuple[float]:
+def f8_u(b: bytes) -> "tuple[float]":
     end_decl()
 
 

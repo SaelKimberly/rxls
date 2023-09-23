@@ -2,12 +2,16 @@ import re
 import typing
 
 from ..core import as_dataclass, cached, u2_p, u2_u
-from ..record import RecordProto, record, safe_read
+from ..record import record, safe_read
 from ..record_enum import BIFF_ENUM
 from . import xstr
 
 if typing.TYPE_CHECKING:
     from typing import Literal
+    from ..record import RecordProto
+
+__all__ = ["BrtFmt"]
+
 
 re_dt = re.compile(r"(?<!\\)[dmhysDMHYS]")
 re_xt = re.compile(r'(?:"[^"]*")|(?:\[(?!(?:hh?|mm?|ss?)\])[^\]]*\])')
@@ -17,9 +21,6 @@ re_time = re.compile(r"[hsHS]")
 re_span = re.compile(r"(?i)\[hh?\](:mm(:ss(\.0*)?)?)?|\[mm?\](:ss(\.0*)?)?|\[ss?\](\.0*)?")
 
 BrtFmt_ID = BIFF_ENUM["BrtFmt"]
-
-
-__all__ = ["BrtFmt"]
 
 
 @as_dataclass
@@ -63,4 +64,5 @@ class BrtFmt:
         return f"BrtFmt: <{self.ifmt:02x}> `{self.stFmtCode}`"
 
 
-_: "RecordProto[BrtFmt]" = None
+if typing.TYPE_CHECKING:
+    _: "RecordProto[BrtFmt]" = None

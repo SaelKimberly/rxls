@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from io import BytesIO
 from struct import Struct as st
 from struct import error as st_err
-from zipfile import ZipFile
 
 from .core import as_dataclass, u1_p, u2_p
 from .record_enum import BIFF_ENUM, BIFF_ENUM_REVERSED
@@ -23,7 +22,44 @@ if typing.TYPE_CHECKING:
         overload,
     )
 
-__all__ = ["record", "RecordProto", "SampleProto", "dump_sz", "safe_read"]
+    class record_proto(Protocol):
+        def __repr__(self) -> str:
+            raise NotImplementedError()
+
+        def dumpr(self) -> "record":
+            raise NotImplementedError()
+
+        @staticmethod
+        def loadr(rc: "record") -> "record_proto | None":
+            raise NotImplementedError()
+
+        @staticmethod
+        def loadr_exact(rc: "record") -> "record_proto":
+            raise NotImplementedError()
+
+    RecordProtoGeneric = TypeVar("RecordProtoGeneric", bound=record_proto)
+
+    RecordProto = Union[RecordProtoGeneric, None]
+
+    class sample_proto(Protocol):
+        def __repr__(self) -> str:
+            raise NotImplementedError()
+
+        def dump(self, io: "IO[bytes]") -> int:
+            raise NotImplementedError()
+
+        @staticmethod
+        def load(io: "IO[bytes]") -> "sample_proto | None":
+            raise NotImplementedError()
+
+    SampleProtoGeneric = TypeVar("SampleProtoGeneric", bound=sample_proto)
+
+    SampleProto = Union[SampleProtoGeneric, None]
+
+    __all__ = ["record", "RecordProto", "SampleProto", "dump_sz", "safe_read"]
+
+else:
+    __all__ = ["record", "dump_sz", "safe_read"]
 
 u2_st_p = st("<H").pack
 u1_st_p = st("<B").pack
@@ -60,48 +96,6 @@ def dump_sz(i: int) -> bytes:
         if i < 0x200000
         else b4_st_p(i & 0x7F | 0x80, (i >> 7) & 0x7F | 0x80, (i >> 14) & 0x7F | 0x80, i >> 21)
     )
-
-
-class record_proto(Protocol):
-    def __repr__(self) -> str:
-        raise NotImplementedError()
-
-    def dumpr(self) -> "record":
-        raise NotImplementedError()
-
-    @staticmethod
-    def loadr(rc: "record") -> "record_proto | None":
-        raise NotImplementedError()
-
-    @staticmethod
-    def loadr_exact(rc: "record") -> "record_proto":
-        raise NotImplementedError()
-
-
-RecordProtoGeneric = TypeVar("RecordProtoGeneric", bound=record_proto)
-
-RecordProto = Union[RecordProtoGeneric, None]
-
-
-class sample_proto(Protocol):
-    def __repr__(self) -> str:
-        raise NotImplementedError()
-
-    def dump(self, io: IO[bytes]) -> int:
-        raise NotImplementedError()
-
-    @staticmethod
-    def load(io: IO[bytes]) -> "sample_proto | None":
-        raise NotImplementedError()
-
-
-class reader_proto(Protocol):
-    @staticmethod
-    def load_file(io: IO[bytes]) -> "reader_proto":
-        raise NotImplementedError()
-
-    def save_file(self, name: str, file: ZipFile) -> None:
-        raise NotImplementedError()
 
 
 @as_dataclass
@@ -198,32 +192,34 @@ class record:
                 return None if len(data) != sz else record(id, data)
             return record(id)
 
-    @overload
+    if typing.TYPE_CHECKING:
+
+        @overload
+        @staticmethod
+        def scan(
+            io: "IO[bytes]",
+            only: "int | str | None" = None,
+            *more_only: "int | str",
+            break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
+            max_scan: int = -1,
+        ) -> "Iterator[record]":
+            ...
+
+        @overload
+        @staticmethod
+        def scan(
+            io: "IO[bytes]",
+            only: "int | str | None" = None,
+            *more_only: "int | str",
+            break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
+            max_scan: int = -1,
+            cv: "Type[RecordProtoGeneric]",
+        ) -> "Iterator[RecordProtoGeneric]":
+            ...
+
     @staticmethod
     def scan(
         io: "IO[bytes]",
-        only: "int | str | None" = None,
-        *more_only: "int | str",
-        break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
-        max_scan: int = -1,
-    ) -> "Iterator[record]":
-        ...
-
-    @overload
-    @staticmethod
-    def scan(
-        io: "IO[bytes]",
-        only: "int | str | None" = None,
-        *more_only: "int | str",
-        break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
-        max_scan: int = -1,
-        cv: "Type[RecordProtoGeneric]",
-    ) -> "Iterator[RecordProtoGeneric]":
-        ...
-
-    @staticmethod
-    def scan(
-        io: IO[bytes],
         only: "int | str | None" = None,
         *more_only: "int | str",
         break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
@@ -292,8 +288,5 @@ class record:
             io.seek(pos)
 
 
-_: RecordProto[record] = None
-
-SampleProtoGeneric = TypeVar("SampleProtoGeneric", bound=sample_proto)
-
-SampleProto = Union[SampleProtoGeneric, None]
+if typing.TYPE_CHECKING:
+    _: RecordProto[record] = None

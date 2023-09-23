@@ -51,4 +51,5 @@ class BrtBundleSh:
         return f"BrtBundleSh: {self.strRelID!r} -> {self.strName!r}"
 
 
-_: "RecordProto[BrtBundleSh]" = None
+if typing.TYPE_CHECKING:
+    _: "RecordProto[BrtBundleSh]" = None

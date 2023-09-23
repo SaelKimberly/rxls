@@ -39,7 +39,7 @@ class xl_series:
         date_fmts: "list[str] | None" = None,
         inferring: 'Literal["no", "basic", "strict", "extended"]' = "no",
         frounding: "int | None" = None,
-    ):
+    ) -> None:
         self.index: int = index
         self.head: int = head_rows
         self.drop: int = drop_rows
@@ -96,7 +96,7 @@ class xl_series:
 
         return max(0, self.rowno)
 
-    def to_arrow(self, length: int, index: "pa.BooleanArray | None" = None) -> PaArray:
+    def to_arrow(self, length: int, index: "pa.BooleanArray | None" = None) -> "PaArray":
         # sourcery skip: low-code-quality
         if self.chunk:
             self.cells.append(pa.array(self.chunk, pa.utf8()))
@@ -265,20 +265,22 @@ class xl_series:
 
         return ser.to_arrow()
 
-    @overload
-    def to_series(
-        self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: Literal["pl"] = "pl"
-    ) -> "pl.Series":
-        ...
+    if typing.TYPE_CHECKING:
 
-    @overload
-    def to_series(
-        self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: Literal["pd"]
-    ) -> "pd.Series":
-        ...
+        @overload
+        def to_series(
+            self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: 'Literal["pl"]' = "pl"
+        ) -> "pl.Series":
+            ...
+
+        @overload
+        def to_series(
+            self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: 'Literal["pd"]'
+        ) -> "pd.Series":
+            ...
 
     def to_series(
-        self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: Literal["pd", "pl"] = "pl"
+        self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: 'Literal["pd", "pl"]' = "pl"
     ) -> "pl.Series | pd.Series":
         if index is not None and isinstance(index, pl.Series):
             if index.is_boolean():
@@ -320,46 +322,47 @@ def create_header(cols: "dict[int, xl_series] | dict[str, xl_series]") -> "list[
     return result
 
 
-@overload
-def xl_scan(
-    xl_file: "str | Path | IO[bytes]",
-    sheet: "int | str" = 0,
-    *,
-    mode: 'Literal["pd", "pl"]' = "pl",
-    head: "int | list[str]" = 0,
-    skip_rows: int = 0,
-    drop_rows: int = 0,
-    take_rows: int = -1,
-    drop_cels: "str | None" = None,
-    with_tqdm: bool = True,
-    book_name: "str | None" = None,
-    index_col: "str | None" = None,
-    inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
-    frounding: "int | None" = None,
-    keep_rows: bool = False,
-) -> pl.DataFrame:
-    ...
+if typing.TYPE_CHECKING:
 
+    @overload
+    def xl_scan(
+        xl_file: "str | Path | IO[bytes]",
+        sheet: "int | str" = 0,
+        *,
+        mode: 'Literal["pd", "pl"]' = "pl",
+        head: "int | list[str]" = 0,
+        skip_rows: int = 0,
+        drop_rows: int = 0,
+        take_rows: int = -1,
+        drop_cels: "str | None" = None,
+        with_tqdm: bool = True,
+        book_name: "str | None" = None,
+        index_col: "str | None" = None,
+        inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
+        frounding: "int | None" = None,
+        keep_rows: bool = False,
+    ) -> pl.DataFrame:
+        ...
 
-@overload
-def xl_scan(
-    xl_file: "str | Path | IO[bytes]",
-    sheet: "int | str" = 0,
-    *,
-    mode: 'Literal["pd"]' = "pd",
-    head: "int | list[str]" = 0,
-    skip_rows: int = 0,
-    drop_rows: int = 0,
-    take_rows: int = -1,
-    drop_cels: "str | None" = None,
-    with_tqdm: bool = True,
-    book_name: "str | None" = None,
-    index_col: "str | None" = None,
-    inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
-    frounding: "int | None" = None,
-    keep_rows: bool = False,
-) -> pd.DataFrame:
-    ...
+    @overload
+    def xl_scan(
+        xl_file: "str | Path | IO[bytes]",
+        sheet: "int | str" = 0,
+        *,
+        mode: 'Literal["pd"]' = "pd",
+        head: "int | list[str]" = 0,
+        skip_rows: int = 0,
+        drop_rows: int = 0,
+        take_rows: int = -1,
+        drop_cels: "str | None" = None,
+        with_tqdm: bool = True,
+        book_name: "str | None" = None,
+        index_col: "str | None" = None,
+        inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
+        frounding: "int | None" = None,
+        keep_rows: bool = False,
+    ) -> pd.DataFrame:
+        ...
 
 
 def xl_scan(

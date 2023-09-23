@@ -17,8 +17,7 @@ from ..records import BrtFmt, xstr
 if typing.TYPE_CHECKING:
     from typing import IO, Callable, Iterator, Literal, TypeVar, cast
 
-
-_T = TypeVar("_T")
+    T = TypeVar("T")
 
 ERROR_STRINGS = frozenset(
     (
@@ -58,7 +57,7 @@ with contextlib.suppress(ImportError):
     col_idx = nb.njit(nb.types.int32(nb.types.Bytes(nb.u1, 1, "C", True)))(col_idx)  # type: ignore
 
 
-def scan_sstrs(io: IO[bytes]) -> "list[str]":
+def scan_sstrs(io: "IO[bytes]") -> "list[str]":
     ret: "list[str]" = []
 
     must_be = False
@@ -68,13 +67,13 @@ def scan_sstrs(io: IO[bytes]) -> "list[str]":
         if tag == "si":
             must_be = True
 
-    def cell_th(txt: str):
+    def cell_th(txt: str) -> None:
         nonlocal must_be, ret
         if must_be:
             ret.append(txt)
             must_be = False
 
-    def cell_eh(tag: str):
+    def cell_eh(tag: str) -> None:
         nonlocal must_be
         if tag == "si" and must_be:
             ret.append(None)  # type: ignore
@@ -166,8 +165,8 @@ def scan_cells(
         io: "IO[bytes]",
         sstrs: "list[str]",
         csfrs: "dict[int, xl_type]",
-        o_q: "Queue[cell | _T]",
-        sentinel: _T,
+        o_q: "Queue[cell | T]",
+        sentinel: "T",
         progr_cbk: "Callable[[], None] | None",
     ) -> None:
         nonlocal drop_cels, skip_rows, take_rows
