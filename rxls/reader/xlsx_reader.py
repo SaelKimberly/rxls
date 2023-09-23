@@ -1,16 +1,21 @@
+import contextlib
 import re
+import typing
+from collections import deque
 from pathlib import Path
-from pyexpat import ParserCreate
-from typing import IO, Callable, Iterator, Literal, TypeVar, cast
 from queue import SimpleQueue as Queue
 from threading import Thread
-from collections import deque
+
 from zipfile import ZipFile
 
+from pyexpat import ParserCreate
 from tqdm import tqdm
 
-from ..records import BrtFmt, xstr
 from ..cell import cell, xl_type
+from ..records import BrtFmt, xstr
+
+if typing.TYPE_CHECKING:
+    from typing import IO, Callable, Iterator, Literal, TypeVar, cast
 
 
 _T = TypeVar("_T")
@@ -47,21 +52,18 @@ def col_idx(col: bytes) -> int:
     return a
 
 
-try:
+with contextlib.suppress(ImportError):
     import numba as nb
 
     col_idx = nb.njit(nb.types.int32(nb.types.Bytes(nb.u1, 1, "C", True)))(col_idx)  # type: ignore
 
-except ImportError:
-    pass
 
-
-def scan_sstrs(io: IO[bytes]) -> list[str]:
-    ret: list[str] = []
+def scan_sstrs(io: IO[bytes]) -> "list[str]":
+    ret: "list[str]" = []
 
     must_be = False
 
-    def cell_sh(tag: str, _: dict[str, str]):
+    def cell_sh(tag: str, _: "dict[str, str]"):
         nonlocal must_be
         if tag == "si":
             must_be = True
@@ -74,10 +76,9 @@ def scan_sstrs(io: IO[bytes]) -> list[str]:
 
     def cell_eh(tag: str):
         nonlocal must_be
-        if tag == "si":
-            if must_be:
-                ret.append(None)  # type: ignore
-                must_be = False
+        if tag == "si" and must_be:
+            ret.append(None)  # type: ignore
+            must_be = False
 
     parser = ParserCreate()
     parser.StartElementHandler = cell_sh
@@ -89,13 +90,13 @@ def scan_sstrs(io: IO[bytes]) -> list[str]:
     return ret
 
 
-def scan_csfrs(io: IO[bytes]) -> dict[int, xl_type]:
+def scan_csfrs(io: "IO[bytes]") -> "dict[int, xl_type]":
     ret = {}
 
-    fms: dict[int, Literal["dt", "d", "t", "td", "i", "f"]] = {}
+    fms: 'dict[int, Literal["dt", "d", "t", "td", "i", "f"]]' = {}
     xf = 0
 
-    def cell_sh(tag: str, attrs: dict[str, str]):
+    def cell_sh(tag: str, attrs: "dict[str, str]"):
         nonlocal xf, ret, fms
         if tag == "numFmt":
             xfmt = BrtFmt(int(attrs["numFmtId"]), xstr(attrs["formatCode"]))
@@ -148,8 +149,8 @@ def scan_csfrs(io: IO[bytes]) -> dict[int, xl_type]:
 
 
 def scan_cells(
-    io: IO[bytes],
-    shared_strs: list[str],
+    io: "IO[bytes]",
+    shared_strs: "list[str]",
     classifiers: "dict[int, xl_type] | None" = None,
     *,
     skip_rows: int = 0,
@@ -157,21 +158,21 @@ def scan_cells(
     drop_cels: "str | re.Pattern | None" = None,
     progr_cbk: "Callable[[], None] | None" = None,
     keepempty: bool = False,
-) -> Iterator[cell]:
-    o_q: Queue[cell] = Queue()
+) -> "Iterator[cell]":
+    o_q: "Queue[cell]" = Queue()
     sentinel = object()
 
     def worker(
-        io: IO[bytes],
-        sstrs: list[str],
-        csfrs: dict[int, xl_type],
+        io: "IO[bytes]",
+        sstrs: "list[str]",
+        csfrs: "dict[int, xl_type]",
         o_q: "Queue[cell | _T]",
         sentinel: _T,
         progr_cbk: "Callable[[], None] | None",
-    ):
+    ) -> None:
         nonlocal drop_cels, skip_rows, take_rows
 
-        tags: deque[str] = deque()
+        tags: "deque[str]" = deque()
         nrow = 0
         is_empty_row: bool = True
         is_sharedstr: bool = False
@@ -191,7 +192,7 @@ def scan_cells(
         if progr_cbk is not None:
             progr_cbk()
 
-        def cell_sh(tag: str, attrs: dict[str, str]):
+        def cell_sh(tag: str, attrs: "dict[str, str]") -> None:
             nonlocal tags, l_col, c_typ, c_row, nrow, is_sharedstr, csfrs, rix, skip_rows, l_tag
             if not tags:
                 if tag == "c" and rix >= skip_rows:
@@ -208,7 +209,7 @@ def scan_cells(
                     return
             tags.append(l_tag := tag)
 
-        def cell_th(txt: str):
+        def cell_th(txt: str) -> None:
             nonlocal o_q, c_val, l_col, c_typ, l_tag, is_empty_row, is_sharedstr, sstrs, rix, skip_rows, wait_drop, drop_cels
             if l_tag == "v" and (txt := txt.strip()) and (rix >= skip_rows):
                 if is_sharedstr:
@@ -239,12 +240,10 @@ def scan_cells(
 
                 o_q.put(cell(c_row, col_idx(l_col.encode()), c_typ, c_val))
 
-        def cell_eh(tag: str):
+        def cell_eh(tag: str) -> None:
             nonlocal tags, nrow, is_empty_row, rix, progr_cbk, c_val, c_typ, c_row, take_rows
             if tags:
                 assert (last_opened := tags.pop()) == tag, f"Invalid closing tag: {tag}. Required {last_opened}."
-            # if tag == "c":
-            #     c_val, c_typ, c_col, c_row = None, xl_type.STRINGS, 0, 0
 
             if tag == "row":
                 # ?: </row> closing tag at the end of cell sequence
@@ -293,7 +292,7 @@ def create_scanner(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     keep_rows: bool = False,
-) -> Iterator[cell]:
+) -> "Iterator[cell]":
     if book_name is None:
         if isinstance(xl_file, str):
             book_name = Path(xl_file).name.rsplit(".", 1)[0]
@@ -313,15 +312,15 @@ def create_scanner(
         else:
             sstrs = []
 
-        i_sheet_idx: dict[int, str] = {}
-        s_sheet_idx: dict[str, str] = {}
+        i_sheet_idx: "dict[int, str]" = {}
+        s_sheet_idx: "dict[str, str]" = {}
 
-        sheets: list[str] = []
+        sheets: "list[str]" = []
 
         rId_to_file = {}
         with zf.open("xl/_rels/workbook.xml.rels") as io:
 
-            def rs_handler(tag: str, attr: dict[str, str]):
+            def rs_handler(tag: str, attr: "dict[str, str]") -> None:
                 nonlocal rId_to_file
                 if tag == "Relationship" and attr["Type"].endswith("/worksheet"):
                     rId_to_file[attr["Id"]] = "xl/" + attr["Target"]
@@ -333,7 +332,7 @@ def create_scanner(
         rId_to_name = {}
         with zf.open("xl/workbook.xml") as io:
 
-            def st_handler(tag: str, attr: dict[str, str]):
+            def st_handler(tag: str, attr: "dict[str, str]") -> None:
                 nonlocal rId_to_name
                 if tag == "sheet":
                     rId_to_name[attr["r:id"]] = attr["name"]
@@ -342,8 +341,8 @@ def create_scanner(
             parser.StartElementHandler = st_handler
             parser.ParseFile(io)
 
-        i_sheet_idx = {i: _path for i, _path in enumerate(rId_to_file[x] for x in rId_to_name)}
-        s_sheet_idx = {name: path for name, path in ((rId_to_name[x], rId_to_file[x]) for x in rId_to_name)}
+        i_sheet_idx = dict(enumerate(rId_to_file[x] for x in rId_to_name))
+        s_sheet_idx = {rId_to_name[x]: rId_to_file[x] for x in rId_to_name}
 
         sheets.extend(s_sheet_idx.keys())
 
@@ -376,7 +375,7 @@ def create_scanner(
                     skip_rows=skip_rows,
                     drop_cels=drop_cels,
                     keepempty=keep_rows,
-                    progr_cbk=cbk,
+                    progr_cbk=cbk,  # type: ignore
                 )
             finally:
                 if tq is not None:

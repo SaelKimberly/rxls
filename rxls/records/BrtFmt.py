@@ -1,15 +1,16 @@
-# flake8: noqa
-from typing import Literal
 import re
+import typing
 
-from ..record_enum import BIFF_ENUM
-from ..record import RecordProto, record, safe_read
 from ..core import as_dataclass, cached, u2_p, u2_u
-
+from ..record import RecordProto, record, safe_read
+from ..record_enum import BIFF_ENUM
 from . import xstr
 
+if typing.TYPE_CHECKING:
+    from typing import Literal
+
 re_dt = re.compile(r"(?<!\\)[dmhysDMHYS]")
-re_xt = re.compile(r'(?:".*?")|(?:\[(?!(?:hh?|mm?|ss?)\])[^\]]*\])')
+re_xt = re.compile(r'(?:"[^"]*")|(?:\[(?!(?:hh?|mm?|ss?)\])[^\]]*\])')
 
 re_date = re.compile(r"[ydYD]")
 re_time = re.compile(r"[hsHS]")
@@ -38,7 +39,7 @@ class BrtFmt:
 
     @staticmethod
     @cached
-    def __check_date_format(fmt: str) -> Literal["td", "dt", "d", "t", "i", "f", None]:
+    def __check_date_format(fmt: str) -> 'Literal["td", "dt", "d", "t", "i", "f", None]':
         f, *_ = fmt.split(";", 1)
         if f == "0":
             return "i"
@@ -48,13 +49,11 @@ class BrtFmt:
             if re_span.search(f):
                 return "td"
             if re_time.search(f):
-                if re_date.search(f):
-                    return "dt"
-                return "t"
+                return "dt" if re_date.search(f) else "t"
             if re_date.search(f):
                 return "d"
 
-    def check_datefmt(self) -> Literal["td", "dt", "d", "t", "i", "f", None]:
+    def check_datefmt(self) -> 'Literal["td", "dt", "d", "t", "i", "f", None]':
         return BrtFmt.__check_date_format(self.stFmtCode.value)
 
     def dumpr(self) -> record:
@@ -64,4 +63,4 @@ class BrtFmt:
         return f"BrtFmt: <{self.ifmt:02x}> `{self.stFmtCode}`"
 
 
-_: RecordProto[BrtFmt] = None
+_: "RecordProto[BrtFmt]" = None

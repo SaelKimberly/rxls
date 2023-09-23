@@ -1,4 +1,5 @@
 from enum import IntFlag
+
 from .core import as_dataclass
 
 __all__ = ["xl_type", "cell"]

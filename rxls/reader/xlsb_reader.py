@@ -1,17 +1,19 @@
-# flake8: noqa
 import re
+import typing
 from pathlib import Path
-from typing import IO, Callable, Iterator, cast
 from zipfile import ZipFile
 
-import numba as nb
 from tqdm import tqdm
 
-from ..records import BrtXF, BrtFmt, BrtBundleSh
-from ..rels import Relationship
-from ..core import struct_u, end_decl, u4_u, u8_p, f8_u
-from ..record import record
 from ..cell import cell, xl_type
+from ..core import end_decl, f8_u, struct_u, u4_u, u8_p
+from ..record import record
+from ..records import BrtBundleSh, BrtFmt, BrtXF
+from ..rels import Relationship
+
+if typing.TYPE_CHECKING:
+    from typing import IO, Callable, Iterator, cast
+
 
 __all__ = ["create_scanner"]
 
@@ -36,20 +38,21 @@ ERROR_STRINGS = frozenset(
 
 
 @struct_u("<II")
-def cell_head(_: bytes) -> tuple[int, int]:
+def cell_head(_: bytes) -> "tuple[int, int]":
     end_decl()
 
 
-def scan_sstrs(io: IO[bytes]) -> list[str]:
+def scan_sstrs(io: "IO[bytes]") -> "list[str]":
     return [r.data[5 : 5 + u4_u(r.data[1:5])[0] * 2].decode("utf-16") for r in record.scan(io, "BrtSSTItem")]
 
 
-def scan_csfrs(io: IO[bytes]) -> dict[int, xl_type]:
+def scan_csfrs(io: "IO[bytes]") -> "dict[int, xl_type]":
+    # sourcery skip: low-code-quality
     ret = {}
 
     xfs = dict(enumerate(r.iFmt for r in record.scan(io, "BrtXF", cv=BrtXF) if r.ixfeParent != 0xFFFF))
     io.seek(0)
-    fms = dict((r.ifmt, fmt) for r in record.scan(io, "BrtFmt", cv=BrtFmt) if (fmt := r.check_datefmt()))
+    fms = {r.ifmt: fmt for r in record.scan(io, "BrtFmt", cv=BrtFmt) if (fmt := r.check_datefmt())}
 
     for xf, fmtid in xfs.items():
         x_fmt: "xl_type | None" = (
@@ -90,8 +93,8 @@ def scan_csfrs(io: IO[bytes]) -> dict[int, xl_type]:
 
 
 def scan_cells(
-    io: IO[bytes],
-    shared_strs: list[str],
+    io: "IO[bytes]",
+    shared_strs: "list[str]",
     classifiers: "dict[int, xl_type] | None" = None,
     *,
     skip_rows: int = 0,
@@ -99,16 +102,15 @@ def scan_cells(
     drop_cels: "str | re.Pattern | None" = None,
     progr_cbk: "Callable[[], None] | None" = None,
     keepempty: bool = False,
-) -> Iterator[cell]:
+) -> "Iterator[cell]":  # sourcery skip: low-code-quality
     if classifiers is None:
         classifiers = {}
     row = 0
     is_empty_row = True
     col = 0
 
-    if drop_cels:
-        if isinstance(drop_cels, str):
-            drop_cels = re.compile(drop_cels)
+    if drop_cels and isinstance(drop_cels, str):
+        drop_cels = re.compile(drop_cels)
     wait_drop = drop_cels is not None
 
     nrow = -1
@@ -176,7 +178,9 @@ def scan_cells(
             # ? BrtCellSt & BrtFmlaString
             elif r.rec_id in (6, 8):
                 (_l,) = u4_u(r.data[8:12])
-                if (v := r.data[12 : 12 + _l * 2].decode("utf-16")) and v not in ERROR_STRINGS:
+                if (
+                    v := r.data[12 : 12 + _l * 2].decode(encoding="utf-16", errors="strict")
+                ) and v not in ERROR_STRINGS:
                     _t, _v = xl_type.STRINGS, v
             # ? BrtCellIsst
             elif r.rec_id == 7:
@@ -207,7 +211,7 @@ def create_scanner(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     keep_rows: bool = False,
-) -> Iterator[cell]:
+) -> Iterator[cell]:  # sourcery skip: low-code-quality
     if book_name is None:
         if isinstance(xl_file, str):
             book_name = Path(xl_file).name.rsplit(".", 1)[0]
@@ -237,7 +241,7 @@ def create_scanner(
 
             with zf.open("xl/workbook.bin") as io:
                 for i, _sheet in enumerate(record.scan(io, "BrtBundleSh", cv=BrtBundleSh)):
-                    sheet_file = "xl/" + next(x.Target for x in wb_rels if x.Id == _sheet.strRelID.value)
+                    sheet_file = f"xl/{next(x.Target for x in wb_rels if x.Id == _sheet.strRelID.value)}"
 
                     s_sheet_idx[_sheet.strName.value] = i_sheet_idx[i] = sheet_file
 
@@ -272,7 +276,7 @@ def create_scanner(
                     take_rows=take_rows,
                     drop_cels=drop_cels,
                     keepempty=keep_rows,
-                    progr_cbk=cbk,
+                    progr_cbk=cbk,  # type: ignore
                 )
             finally:
                 if tq is not None:

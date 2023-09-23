@@ -1,26 +1,29 @@
-# flake8: noqa
+import typing
 from io import BytesIO
 
+from ..core import as_dataclass, end_decl, struct_p, struct_u
+from ..record import record, safe_read
 from ..record_enum import BIFF_ENUM
-from ..record import RecordProto, record, safe_read
-from ..core import Un, end_decl, as_dataclass, struct_p, struct_u
-
 from . import xstr
+
+if typing.TYPE_CHECKING:
+    from ..record import RecordProto
+    from ..core import Un
+
+__all__ = ["BrtBundleSh"]
 
 
 @struct_u("<II")
-def u44_u(_: bytes) -> tuple[int, int]:
+def u44_u(_: bytes) -> "tuple[int, int]":
     end_decl()
 
 
 @struct_p("<II")
-def u44_p(*_: Un[tuple[int, int]]) -> bytes:
+def u44_p(*_: "Un[tuple[int, int]]") -> bytes:
     end_decl()
 
 
 BrtBundleSh_ID = BIFF_ENUM["BrtBundleSh"]
-
-__all__ = ["BrtBundleSh"]
 
 
 @as_dataclass
@@ -48,4 +51,4 @@ class BrtBundleSh:
         return f"BrtBundleSh: {self.strRelID!r} -> {self.strName!r}"
 
 
-_: RecordProto[BrtBundleSh] = None
+_: "RecordProto[BrtBundleSh]" = None

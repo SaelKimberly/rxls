@@ -1,24 +1,28 @@
+import contextlib
+import typing
 import re
+from datetime import time
 from pathlib import Path
 from zipfile import ZipFile
-from datetime import time
-from typing import IO, Literal, TypeVar, cast, overload
 
-import pyarrow as pa
-import polars as pl
 import pandas as pd
-from ordered_set import OrderedSet as oset
-from typing_extensions import TypeAlias
+import polars as pl
+import pyarrow as pa
 
 from ..cell import cell, xl_type
 from .xlsb_reader import create_scanner as xlsb_scanner
 from .xlsx_reader import create_scanner as xlsx_scanner
 
+if typing.TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+    from typing import IO, Literal, TypeVar, cast, overload
+
+    T = TypeVar("T")
+    PaArray: TypeAlias = "pa.Array[T, pa.Scalar[T]] | pa.ChunkedArray[T, pa.Scalar[T]]"  # type: ignore
+
 __all__ = ["xl_scan", "xl_series"]
 
 
-T = TypeVar("T")
-PaArray: TypeAlias = "pa.Array[T, pa.Scalar[T]] | pa.ChunkedArray[T, pa.Scalar[T]]"  # type: ignore
 MSECS_PER_DAY = pl.lit(86_400_000)
 WINDOWS_EPOCH = pl.lit(-25_569)
 
@@ -33,7 +37,7 @@ class xl_series:
         head_rows: int = 0,
         drop_rows: int = 0,
         date_fmts: "list[str] | None" = None,
-        inferring: Literal["no", "basic", "strict", "extended"] = "no",
+        inferring: 'Literal["no", "basic", "strict", "extended"]' = "no",
         frounding: "int | None" = None,
     ):
         self.index: int = index
@@ -58,10 +62,10 @@ class xl_series:
         self.frnd = frounding
 
         self.cells: "list[PaArray[str]]" = []
-        self.types: dict[xl_type, int] = {}
+        self.types: "dict[xl_type, int]" = {}
         self.rowno: int = -1
 
-        self.inferring: Literal["no", "basic", "strict", "extended"] = inferring
+        self.inferring: 'Literal["no", "basic", "strict", "extended"]' = inferring
 
         self.chunk: "list[str]" = []
 
@@ -70,7 +74,7 @@ class xl_series:
         return self._name.strip(": ") or None
 
     @name.setter
-    def name_setter(self, new_name: str):
+    def name_setter(self, new_name: str) -> None:
         assert new_name and isinstance(new_name, str), f"Series name cannot be set to `{new_name}`!"
         self._name = new_name
 
@@ -93,6 +97,7 @@ class xl_series:
         return max(0, self.rowno)
 
     def to_arrow(self, length: int, index: "pa.BooleanArray | None" = None) -> PaArray:
+        # sourcery skip: low-code-quality
         if self.chunk:
             self.cells.append(pa.array(self.chunk, pa.utf8()))
             self.chunk.clear()
@@ -103,7 +108,7 @@ class xl_series:
         if not self.cells and length > 0:
             arr = pa.nulls(length, pa.utf8())
         else:
-            arr: pa.Array[str, pa.Scalar[str]] = pa.concat_arrays(self.cells)  # type: ignore
+            arr: "pa.Array[str, pa.Scalar[str]]" = pa.concat_arrays(self.cells)  # type: ignore
 
         if length > 0:
             if len(arr) < length:
@@ -142,10 +147,9 @@ class xl_series:
                 most_used_type = next(iter(self.types.keys()), xl_type.STRINGS)
 
         if most_used_type in (xl_type.STRINGS, xl_type.BOOLEAN):
-            pass
+            pass  # NOSONAR
 
         elif most_used_type in (xl_type.INTEGER, xl_type.FLOATIN):
-
             ret = ser.cast(pl.Float64, strict=False)
             if self.frnd is not None:
                 ret = ret.round(self.frnd)
@@ -229,7 +233,7 @@ class xl_series:
                 return ret.to_arrow()
 
         if self.inferring == "extended":
-            try:
+            with contextlib.suppress(Exception):
                 if (xl_type.FLOATIN in self.types or xl_type.INTEGER in self.types) and ser.drop_nulls().str.contains(
                     r"^(?:(?:0(?:\.0+)?)|(?:-?(?:(?:[1-9]\d*)|0)\.\d*[1-9]\d*)|(?:-?[1-9]\d*))$"
                 ).all():
@@ -239,6 +243,7 @@ class xl_series:
                     if ((ret.drop_nulls() % 1.0) == 0.0).all():
                         ret = ret.cast(pl.Int64)
                     return ret.to_arrow()
+
                 if (
                     ser.drop_nulls()
                     .str.contains(
@@ -258,8 +263,6 @@ class xl_series:
                     if ret.null_count() == ser.null_count():
                         return ret.to_arrow()
 
-            except Exception:
-                pass
         return ser.to_arrow()
 
     @overload
@@ -277,20 +280,44 @@ class xl_series:
     def to_series(
         self, length: int, index: "pl.Series | pa.BooleanArray | None" = None, *, mode: Literal["pd", "pl"] = "pl"
     ) -> "pl.Series | pd.Series":
-        if index is not None:
-            if isinstance(index, pl.Series):
-                if index.is_boolean():
-                    index = index.to_arrow()  # type: ignore
-                else:
-                    index = index.is_not_null().to_arrow()  # type: ignore
+        if index is not None and isinstance(index, pl.Series):
+            if index.is_boolean():
+                index = index.to_arrow()  # type: ignore
+            else:
+                index = index.is_not_null().to_arrow()  # type: ignore
+
         ret = cast(pl.Series, pl.from_arrow(self.to_arrow(length, index if index is not None else None)))  # type: ignore
         if mode == "pd":
             ret = ret.to_arrow().to_pandas(self_destruct=True)
-            if self.name:
-                return ret.rename(self.name)  # type: ignore
-            return ret  # type: ignore
-
+            return ret.rename(self.name) if self.name else ret  # type: ignore
         return ret.alias(self.name) if self.name else ret
+
+
+def create_header(cols: "dict[int, xl_series] | dict[str, xl_series]") -> "list[str]":
+    result = [col.name or f"Unnamed: {i}" for i, col in enumerate(cols.values())]
+
+    hdrs = []
+    max_level = None
+    last_hdrx = {}
+    for name in result:
+        try:
+            parts = {int(no): nm for no, nm in (part.split("|", 1) for part in name.split("::"))}
+        except Exception:
+            parts = {max_level or 1: name}
+
+        ptmax = max(parts)
+        if max_level is None:
+            max_level = ptmax
+
+        elif ptmax < max_level:
+            parts |= {i: nm for i, nm in last_hdrx.items() if i > ptmax}
+
+        last_hdrx = parts
+
+        hdrs.append(", ".join(last_hdrx[p] for p in reversed(sorted(last_hdrx))))
+    result = hdrs
+
+    return result
 
 
 @overload
@@ -298,7 +325,7 @@ def xl_scan(
     xl_file: "str | Path | IO[bytes]",
     sheet: "int | str" = 0,
     *,
-    mode: Literal["pd", "pl"] = "pl",
+    mode: 'Literal["pd", "pl"]' = "pl",
     head: "int | list[str]" = 0,
     skip_rows: int = 0,
     drop_rows: int = 0,
@@ -307,7 +334,7 @@ def xl_scan(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     index_col: "str | None" = None,
-    inferring: Literal["no", "basic", "strict", "extended"] = "basic",
+    inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
     frounding: "int | None" = None,
     keep_rows: bool = False,
 ) -> pl.DataFrame:
@@ -319,7 +346,7 @@ def xl_scan(
     xl_file: "str | Path | IO[bytes]",
     sheet: "int | str" = 0,
     *,
-    mode: Literal["pd"] = "pd",
+    mode: 'Literal["pd"]' = "pd",
     head: "int | list[str]" = 0,
     skip_rows: int = 0,
     drop_rows: int = 0,
@@ -328,7 +355,7 @@ def xl_scan(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     index_col: "str | None" = None,
-    inferring: Literal["no", "basic", "strict", "extended"] = "basic",
+    inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
     frounding: "int | None" = None,
     keep_rows: bool = False,
 ) -> pd.DataFrame:
@@ -339,7 +366,7 @@ def xl_scan(
     xl_file: "str | Path | IO[bytes]",
     sheet: "int | str" = 0,
     *,
-    mode: Literal["pd", "pl"] = "pl",
+    mode: 'Literal["pd", "pl"]' = "pl",
     head: "int | list[str]" = 0,
     skip_rows: int = 0,
     drop_rows: int = 0,
@@ -348,11 +375,11 @@ def xl_scan(
     with_tqdm: bool = True,
     book_name: "str | None" = None,
     index_col: "str | None" = None,
-    inferring: Literal["no", "basic", "strict", "extended"] = "basic",
+    inferring: 'Literal["no", "basic", "strict", "extended"]' = "basic",
     frounding: "int | None" = None,
     keep_rows: bool = False,
-) -> "pl.DataFrame | pd.DataFrame":
-    f_input: Literal["xlsx", "xlsb"]
+) -> "pl.DataFrame | pd.DataFrame":  # sourcery skip: low-code-quality
+    f_input: 'Literal["xlsx", "xlsb"]'
     if isinstance(xl_file, str):
         xl_file = Path(xl_file)
     if issubclass(type(xl_file), Path):
@@ -375,7 +402,7 @@ def xl_scan(
 
     scanner = xlsx_scanner if f_input == "xlsx" else xlsb_scanner
 
-    cols: dict[int, xl_series] = {}
+    cols: "dict[int, xl_series] | dict[str, xl_series]" = {}
     nrow: int = 0
     head_rows = head if isinstance(head, int) else 0
 
@@ -401,30 +428,8 @@ def xl_scan(
     if isinstance(head, list):
         names = [name for name, _ in zip(head, cols)]
     else:
-        names = [col.name or f"Unnamed: {i}" for i, col in enumerate(cols.values())]
-
-        hdrs = []
-        max_level = None
-        last_hdrx = {}
-        for name in names:
-            try:
-                parts = {int(no): nm for no, nm in (part.split("|", 1) for part in name.split("::"))}
-            except Exception:
-                parts = {max_level or 1: name}
-
-            ptmax = max(parts)
-            if max_level is None:
-                max_level = ptmax
-
-            elif ptmax < max_level:
-                parts.update({i: nm for i, nm in last_hdrx.items() if i > ptmax})
-
-            last_hdrx = parts
-
-            hdrs.append(", ".join(parts[p] for p in reversed(sorted(parts))))
-        names = hdrs
-
-    used = oset([])
+        names = create_header(cols)
+    used: "list[str]" = []
 
     for name in names:
         if name in used:
@@ -433,9 +438,9 @@ def xl_scan(
             while (x := f"{n}. {i}") in used:
                 i += 1
 
-            used.add(x)
+            used.append(x)
         else:
-            used.add(name)
+            used.append(name)
 
     names = list(used)
     cols = {name: cols[col] for name, col in zip(names, cols)}
@@ -459,7 +464,4 @@ def xl_scan(
             name: col.to_series(nrow - skip_rows - head_rows - drop_rows + 2, mode=mode) for name, col in cols.items()
         }
 
-    if mode == "pl":
-        return pl.DataFrame(frames)  # type: ignore
-    else:
-        return pd.DataFrame(frames)
+    return pl.DataFrame(frames) if mode == "pl" else pd.DataFrame(frames)  # type: ignore

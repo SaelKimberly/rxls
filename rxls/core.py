@@ -1,11 +1,15 @@
-# flake8: noqa
-from struct import Struct
-from typing import Any, Iterable, TypeVar, Callable, NoReturn, Type
-from typing_extensions import ParamSpec, TypeVarTuple, Unpack as Un
-from functools import cache
+import typing
 from collections import deque
+from functools import cache
+from struct import Struct
+
 from recordclass import as_dataclass as _as_dataclass
-from typing_extensions import dataclass_transform
+
+if typing.TYPE_CHECKING:
+    from typing import Any, Callable, Iterable, NoReturn, Type, TypeVar
+    from typing_extensions import ParamSpec, TypeVarTuple
+    from typing_extensions import Unpack as Un
+    from typing_extensions import dataclass_transform
 
 __all__ = [
     "cached",
@@ -42,7 +46,7 @@ def exhaust(it: Iterable[T], f: "Callable[[T], Any] | None" = None) -> None:
     deque(it if f is None else map(f, it), 0)
 
 
-cached = cache  # type: ignore
+cached = cache  # type: ignore  # noqa: F811
 
 _T = TypeVar("_T")
 

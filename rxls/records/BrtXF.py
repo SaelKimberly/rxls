@@ -1,15 +1,19 @@
+import typing
 from enum import IntEnum, IntFlag
 from struct import Struct as st
 
 from ..core import as_dataclass
-from ..record import RecordProto, record, safe_read
+from ..record import record, safe_read
 from ..record_enum import BIFF_ENUM
+
+if typing.TYPE_CHECKING:
+    from ..record import RecordProto
+
+__all__ = ["HAlign", "VAlign", "ReadingOrder", "BrtXF"]
 
 u4_st_u = st("<I").unpack
 u2_st_u = st("<H").unpack
 u2_st_p = st("<H").pack
-
-__all__ = ["HAlign", "VAlign", "ReadingOrder", "BrtXF"]
 
 BUILTIN_FORMATS = {
     0x00: "General",
@@ -111,7 +115,9 @@ class Alignment:
     iReadingOrder: ReadingOrder = ReadingOrder.CONTEXT_DEPENDENT
 
     def __repr__(self) -> str:
-        f_str = lambda n: f" {n}" if self[n] else ""  # type: ignore
+        def f_str(n):
+            return f" {n}" if self[n] else ""  # type: ignore
+
         return (
             f"Alignment: {{rot: {self.trot} ind: {self.indent} h_a: {self.alc.name} v_a: {self.alcv.name} r_o: {self.iReadingOrder.name}"
             f' flags: [{f_str("fWrap")}{f_str("fJustLast")}{f_str("fShrinkToFit")}{f_str("fMergeCell")}]}}'
@@ -203,7 +209,8 @@ class BrtXF:
         )
 
     def __repr__(self) -> str:
-        f_str = lambda n: f" {n}" if self[n] else ""  # type: ignore
+        def f_str(n):
+            return f" {n}" if self[n] else ""  # type: ignore
 
         return (
             f"XF {self.ixfeParent:04x}: [{self.iFmt:04x} {self.iFont:04x} {self.iFill:04x} {self.ixBorder:04x}]"
@@ -214,4 +221,4 @@ class BrtXF:
         )
 
 
-_: RecordProto[BrtXF] = None
+_: "RecordProto[BrtXF]" = None

@@ -1,8 +1,13 @@
-from typing import IO
-from struct import Struct as st, error as st_err
+import contextlib
+import typing
+from struct import Struct as st
+from struct import error as st_err
 
-from ..record import SampleProto
 from ..core import as_dataclass
+
+if typing.TYPE_CHECKING:
+    from typing import IO
+    from ..record import SampleProto
 
 u4_st_u = st("<I").unpack
 u4_st_p = st("<I").pack
@@ -19,20 +24,18 @@ class xstr:
         return self.s or ""
 
     @staticmethod
-    def load_exact(io: IO[bytes]) -> "xstr":
+    def load_exact(io: "IO[bytes]") -> "xstr":
         (sz,) = u4_st_u(io.read(4))
         if sz == 0xFFFFFFFF:
             return xstr(None)
         return xstr(io.read(sz * 2).decode("utf-16"))
 
     @staticmethod
-    def load(io: IO[bytes]) -> "xstr | None":
-        try:
+    def load(io: "IO[bytes]") -> "xstr | None":
+        with contextlib.suppress(IndexError, UnicodeDecodeError, st_err):
             return xstr.load_exact(io)
-        except (IndexError, UnicodeDecodeError, st_err):
-            pass
 
-    def dump(self, io: IO[bytes]) -> int:
+    def dump(self, io: "IO[bytes]") -> int:
         if self.s is None:
             io.write(b"\xff\xff\xff\xff")
         elif self.s:
@@ -58,4 +61,4 @@ class xstr:
         return self.s or "<empty-string>"
 
 
-_: SampleProto[xstr] = None
+_: "SampleProto[xstr]" = None

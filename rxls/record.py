@@ -1,14 +1,27 @@
 import os
+import typing
 from contextlib import contextmanager
 from io import BytesIO
-from typing import IO, Iterable, Protocol, Iterator, TypeVar, Callable, Any, Union, Type, overload
-
-from struct import Struct as st, error as st_err
+from struct import Struct as st
+from struct import error as st_err
 from zipfile import ZipFile
 
-from .core import u1_p, u2_p, as_dataclass
-
+from .core import as_dataclass, u1_p, u2_p
 from .record_enum import BIFF_ENUM, BIFF_ENUM_REVERSED
+
+if typing.TYPE_CHECKING:
+    from typing import (
+        IO,
+        Any,
+        Callable,
+        Iterable,
+        Iterator,
+        Protocol,
+        Type,
+        TypeVar,
+        Union,
+        overload,
+    )
 
 __all__ = ["record", "RecordProto", "SampleProto", "dump_sz", "safe_read"]
 
@@ -26,18 +39,16 @@ ST_CACHE: "dict[str, tuple[int, Callable[[bytes], tuple[Any, ...]]]]" = {}
 
 
 @contextmanager
-def safe_read(io: "IO[bytes] | None" = None) -> Iterator[None]:
+def safe_read(io: "IO[bytes] | None" = None) -> "Iterator[None]":
     ix = io.tell() if io is not None else 0
     try:
         yield
     except (st_err, IndexError, UnicodeDecodeError):
         if io is not None:
             io.seek(ix)
-    finally:
-        pass
 
 
-def dump_sz(i: int):
+def dump_sz(i: int) -> bytes:
     # 0.2 - 0.8 us
     # assert i < 0x10000000
     return (
@@ -99,18 +110,18 @@ class record:
     data: bytes = b""
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return not self.data
 
     @property
-    def rec_sz(self):
+    def rec_sz(self) -> int:
         return len(self.data)
 
     @property
     def xl_name(self) -> str:
         return BIFF_ENUM_REVERSED.get(self.rec_id, "Undefined")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ix = self.rec_id
         if ix & 0b1000_0000:
             ix = (ix & 0b0111_1111) | ((ix & 0b0111_1111_0000_0000) >> 1)
@@ -132,7 +143,7 @@ class record:
             ]
         )
 
-    def dump(self, io: IO[bytes]) -> int:
+    def dump(self, io: "IO[bytes]") -> int:
         io.write(self.as_binary())
 
         return io.tell()
@@ -150,6 +161,7 @@ class record:
 
     @staticmethod
     def from_data(id: "int | str", *data: "bytes | sample_proto") -> "record":
+        # sourcery skip: avoid-builtin-shadow
         if isinstance(id, str):
             id = BIFF_ENUM[id]
         if not data:
@@ -163,7 +175,8 @@ class record:
             return record(id, io.getvalue())
 
     @staticmethod
-    def peek(io: IO[bytes]) -> "record | None":
+    def peek(io: "IO[bytes]") -> "record | None":
+        # sourcery skip: avoid-builtin-shadow
         with safe_read(io):
             # read record id
             id = io.read(1)[0]
@@ -182,15 +195,13 @@ class record:
             # read record data if exists and id in x_only set, skip data otherwise
             if sz:
                 data = io.read(sz)
-                if len(data) != sz:
-                    return None
-                return record(id, data)
+                return None if len(data) != sz else record(id, data)
             return record(id)
 
     @overload
     @staticmethod
     def scan(
-        io: IO[bytes],
+        io: "IO[bytes]",
         only: "int | str | None" = None,
         *more_only: "int | str",
         break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
@@ -201,7 +212,7 @@ class record:
     @overload
     @staticmethod
     def scan(
-        io: IO[bytes],
+        io: "IO[bytes]",
         only: "int | str | None" = None,
         *more_only: "int | str",
         break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
@@ -218,7 +229,7 @@ class record:
         break_on: "int | str | Iterable[str] | Iterable[int] | None" = None,
         max_scan: int = -1,
         cv: "Type[RecordProtoGeneric] | None" = None,
-    ) -> "Iterator[RecordProtoGeneric]":
+    ) -> "Iterator[RecordProtoGeneric]":  # sourcery skip: avoid-builtin-shadow, low-code-quality
         x_only: "set[int]" = (
             {only if isinstance(only, int) else BIFF_ENUM[only]}.union(
                 x if isinstance(x, int) else BIFF_ENUM[x] for x in more_only
@@ -227,15 +238,14 @@ class record:
             else set()
         )
 
-        if break_on is not None:
-            if isinstance(break_on, str):
-                break_on = {BIFF_ENUM[break_on]}
-            elif isinstance(break_on, int):
-                break_on = {break_on}
-            else:
-                break_on = {x if isinstance(x, int) else BIFF_ENUM[x] for x in break_on}
-        else:
+        if break_on is None:
             break_on = {}
+        elif isinstance(break_on, str):
+            break_on = {BIFF_ENUM[break_on]}
+        elif isinstance(break_on, int):
+            break_on = {break_on}
+        else:
+            break_on = {x if isinstance(x, int) else BIFF_ENUM[x] for x in break_on}
 
         pos: int = 0
         cnt: int = 0
