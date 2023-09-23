@@ -1,6 +1,7 @@
 import contextlib
 import typing
 import re
+from typing import cast
 from datetime import time
 from pathlib import Path
 from zipfile import ZipFile
@@ -15,7 +16,7 @@ from .xlsx_reader import create_scanner as xlsx_scanner
 
 if typing.TYPE_CHECKING:
     from typing_extensions import TypeAlias
-    from typing import IO, Literal, TypeVar, cast, overload
+    from typing import IO, Literal, TypeVar, overload
 
     T = TypeVar("T")
     PaArray: TypeAlias = "pa.Array[T, pa.Scalar[T]] | pa.ChunkedArray[T, pa.Scalar[T]]"  # type: ignore

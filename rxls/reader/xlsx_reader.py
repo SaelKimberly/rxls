@@ -5,7 +5,7 @@ from collections import deque
 from pathlib import Path
 from queue import SimpleQueue as Queue
 from threading import Thread
-
+from typing import cast
 from zipfile import ZipFile
 
 from pyexpat import ParserCreate
@@ -15,7 +15,7 @@ from ..cell import cell, xl_type
 from ..records import BrtFmt, xstr
 
 if typing.TYPE_CHECKING:
-    from typing import IO, Callable, Iterator, Literal, TypeVar, cast
+    from typing import IO, Callable, Iterator, Literal, TypeVar
 
     T = TypeVar("T")
 

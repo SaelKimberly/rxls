@@ -22,7 +22,7 @@ class Relationship:
     def scan_xml(io: "IO[bytes]") -> "list[Relationship]":
         rels = []
 
-        def rs_handler(tag: str, attr: dict[str, str]):
+        def rs_handler(tag: str, attr: "dict[str, str]"):
             nonlocal rels
 
             if tag == "Relationship":

@@ -1,6 +1,7 @@
 import re
 import typing
 from pathlib import Path
+from typing import cast
 from zipfile import ZipFile
 
 from tqdm import tqdm
@@ -12,7 +13,7 @@ from ..records import BrtBundleSh, BrtFmt, BrtXF
 from ..rels import Relationship
 
 if typing.TYPE_CHECKING:
-    from typing import IO, Callable, Iterator, cast
+    from typing import IO, Callable, Iterator
 
 
 __all__ = ["create_scanner"]
@@ -230,14 +231,14 @@ def create_scanner(
         else:
             sstrs = []
 
-        i_sheet_idx: dict[int, str] = {}
-        s_sheet_idx: dict[str, str] = {}
+        i_sheet_idx: "dict[int, str]" = {}
+        s_sheet_idx: "dict[str, str]" = {}
 
-        sheets: list[str] = []
+        sheets: "list[str]" = []
 
         if "xl/_rels/workbook.bin.rels" in files:
             with zf.open("xl/_rels/workbook.bin.rels", "r") as io:
-                wb_rels: list[Relationship] = Relationship.scan_xml(io)
+                wb_rels: "list[Relationship]" = Relationship.scan_xml(io)
 
             with zf.open("xl/workbook.bin") as io:
                 for i, _sheet in enumerate(record.scan(io, "BrtBundleSh", cv=BrtBundleSh)):
