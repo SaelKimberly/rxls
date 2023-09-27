@@ -33,14 +33,13 @@ This module provides one function: `xl_scan` for reading both .xlsx and .xlsb fi
 
 # Dependencies:
 
-`python>=3.9.5`
+`python>=3.8`
 
-- pyarrow>=12.0
-- polars>=1.18
-- pandas>=2.0
-- recordclass==0.20
-- ordered-set==4.1.0
-- typing-extensions>=4.7.1
-- lxml>=4.9.3
+- pyarrow>=13.0.0
+- polars>=0.19.3
+- pandas>=2.0.3
+- numpy>=1.24.4
+- numba>=0.58.0
+- recordclass>=0.20
 - tqdm>=4.66.1
-- numba>=0.57.1 (optional)
+- typing-extensions>=4.8.0
