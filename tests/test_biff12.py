@@ -1,5 +1,6 @@
 from io import BytesIO
-from rxls.record import record, dump_sz
+
+from ..rxls.record import record, dump_sz
 
 
 def test_from_data() -> None:
