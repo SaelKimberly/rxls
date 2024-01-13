@@ -1,7 +1,3 @@
-"""
-Dictionary of all BIFF12 record ids, in original format (not just enumeration)
-"""
-
 __all__ = ["BIFF_ENUM", "BIFF_ENUM_REVERSED"]
 
 BIFF_ENUM = {
