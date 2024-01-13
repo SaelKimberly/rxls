@@ -1,14 +1,14 @@
-# rxls
+# RXLS
 
 Shortcut from Read XLS\[X|B\]
 
 Reading both XLSX and XLSB files, fast and memory-safe, with Python, into Polars or Pandas.
 
-# Description
+## Description
 
 This module provides one function: `xl_scan` for reading both .xlsx and .xlsb files.
 
-# Parameters:
+## Parameters:
 
 - Positional:
   - **xl_file**: path to the file, or BytesIO with file.
@@ -31,7 +31,7 @@ This module provides one function: `xl_scan` for reading both .xlsx and .xlsb fi
   - **frounding**: `int` or `None` (default: None). Round floating-point cells to the given precision.
   - **keep_rows**: `bool` (default: False). Keep empty rows in resulting dataframe. Ignored, when use along with `index_col`
 
-# Dependencies:
+## Dependencies:
 
 `python>=3.8`
 
