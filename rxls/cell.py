@@ -1,26 +1,27 @@
-from enum import IntFlag
+from __future__ import annotations
+
+__all__ = ["cell"]
+
 
 from .core import as_dataclass
 
-__all__ = ["xl_type", "cell"]
 
+@as_dataclass(readonly=True)
+class cell:  # noqa: N801
+    """Excel cell representation. Very lightweight with recordclass"""
 
-class xl_type(IntFlag):
-    ERRMPTY = 0b0000
-    INTEGER = 0b0001
-    FLOATIN = 0b0010
-    BOOLEAN = 0b0100
-    STRINGS = 0b1000
-
-    DATETIME = 0b0001_0000
-    DATETYPE = 0b0010_0000
-    TIMETYPE = 0b0100_0000
-    DURATION = 0b1000_0000
-
-
-@as_dataclass(hashable=True)
-class cell:
     row: int
+    "0-based row index"
+
     col: int
-    typ: xl_type = xl_type.ERRMPTY
-    val: "str | None" = None
+    "0-based column index"
+
+    xdt: int
+    """
+    ### DATA TYPE AND REPRESENTATION
+    """
+
+    val: bytes
+    """
+    ### CELL DATA
+    """
