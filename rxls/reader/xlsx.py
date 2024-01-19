@@ -169,17 +169,17 @@ class XlsxWorkbook:  # noqa: D101
 
             def cell_th(txt: str) -> None:
                 nonlocal must_be, ret
-                if must_be:
-                    if txt := txt.strip():
-                        ret.append(txt)
-                        if self.null_values(txt):
-                            self.null_shared.add(str(len(ret) - 1))
+                if must_be and (txt := txt.strip()):
+                    if self.null_values(txt):
+                        return
+                    ret.append(txt)
                     must_be = False
 
             def cell_eh(tag: str) -> None:
                 nonlocal must_be
                 if tag == "si" and must_be:
                     ret.append(None)  # type: ignore
+                    self.null_shared.add(str(len(ret) - 1))
                     must_be = False
 
             parser = ParserCreate()
