@@ -119,7 +119,7 @@ def read(  # noqa: C901, PLR0914, PLR0912, PLR0915
     lookup_head: str | int | None = None,
     lookup_size: int = 30,
     # ? For rows intellectual filtering
-    row_filters: str | list[str] | pa.BooleanArray | None = None,
+    row_filters: str | list[str] | None = None,
     # ? Two or more filters may be concatenated using these binary operators:
     row_filters_strategy: Literal["or", "and"] | Sequence[Literal["or", "and"]] = "or",
     # ? For float to int casting when round by `float_precision` digits gives equal result to round(0)
