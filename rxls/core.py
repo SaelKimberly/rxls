@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 __all__ = [
     "POLARS_AVAILABLE",
@@ -60,6 +61,7 @@ else:
     except ImportError:
         from functools import lru_cache as cached
 
+PERFORMANCE_WARNINGS: bool = os.environ.get("RXLS_PERFORMANCE_WARNINGS", "0") == "1"
 
 try:
     import numba
@@ -78,10 +80,24 @@ try:
     except ImportError:
         NUMBA_TBB_AVAILABLE = False
 
+        if PERFORMANCE_WARNINGS:
+            warnings.warn(
+                "Numba GPU acceleration of RXLS is unavailable (slowdown x4)",
+                UserWarning,
+                stacklevel=2,
+            )
+
 
 except ImportError:
     NUMBA_AVAILABLE = False
     NUMBA_TBB_AVAILABLE = False
+
+    if PERFORMANCE_WARNINGS:
+        warnings.warn(
+            "Numba acceleration of RXLS is unavailable (slowdown x4)",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 try:
