@@ -1,5 +1,4 @@
 from __future__ import annotations
-import os
 
 __all__ = [
     "POLARS_AVAILABLE",
@@ -10,6 +9,7 @@ __all__ = [
     "u4_u",
     "u4_p",
     "u2_p",
+    "u1_p",
     "struct_u",
     "struct_p",
     "end_decl",
@@ -17,6 +17,8 @@ __all__ = [
     "PaValue",
     "PaArray",
 ]
+
+import os
 import warnings
 from struct import Struct
 from typing import TYPE_CHECKING
@@ -190,4 +192,9 @@ def u4_p(i: int) -> bytes:
 
 @struct_p("<H")
 def u2_p(i: int) -> bytes:
+    end_decl()
+
+
+@struct_p("<B")
+def u1_p(i: int) -> bytes:
     end_decl()

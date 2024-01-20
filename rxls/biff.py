@@ -1,17 +1,48 @@
-# ruff: noqa:D101, D102, D105, ANN201, N801
+# ruff: noqa:D101, D102, D105, ANN201, N801, N813, PLR2004
 """BIFF12 PARSER"""
 from __future__ import annotations
 
-__all__ = ["record", "scan_biff"]
+__all__ = ["record", "scan_biff", "dump_sz"]
 
 import os
+from io import BytesIO
+from struct import Struct as st
 from typing import TYPE_CHECKING
 
-from .biff_enum import BIFF_ENUM_REVERSED
-from .core import NUMBA_AVAILABLE, as_dataclass
+from .biff_enum import BIFF_ENUM, BIFF_ENUM_REVERSED
+from .core import NUMBA_AVAILABLE, as_dataclass, u1_p, u2_p
 
 if TYPE_CHECKING:
     from typing import IO, Iterator
+
+u2_st_p = st("<H").pack
+u1_st_p = st("<B").pack
+u1_st_u = st("<B").unpack
+
+b1_st_p = st("<B").pack
+b1_st_u = st("<B").unpack
+b2_st_p = st("<BB").pack
+b3_st_p = st("<BBB").pack
+b4_st_p = st("<BBBB").pack
+
+
+def dump_sz(i: int) -> bytes:
+    # 0.2 - 0.8 us
+    # assert i < 0x10000000
+    return (
+        b1_st_p(i)
+        if i < 0x80
+        else b2_st_p(i & 0x7F | 0x80, i >> 7)
+        if i < 0x4000
+        else b3_st_p(i & 0x7F | 0x80, (i >> 7) & 0x7F | 0x80, i >> 14)
+        if i < 0x200000
+        else b4_st_p(
+            i & 0x7F | 0x80,
+            (i >> 7) & 0x7F | 0x80,
+            (i >> 14) & 0x7F | 0x80,
+            i >> 21,
+        )
+    )
 
 
 @as_dataclass(fast_new=True)
@@ -36,6 +67,44 @@ class record:
         if ix & 0b1000_0000:
             ix = (ix & 0b0111_1111) | ((ix & 0b0111_1111_0000_0000) >> 1)
         return f'{ix:04} ({self.rec_id:04x}) <{self.rec_sz:-^4}> `{self.rec_name}`{chr(10)}{chr(9)}[{self.data.hex(" ", 1) if self.data else ""}]'  # type: ignore
+
+    @staticmethod
+    def from_data(id: int | str, *data: bytes) -> record:
+        if isinstance(id, str):
+            id = BIFF_ENUM[id]
+        if not data:
+            return record(id, b"")
+        with BytesIO() as io:
+            for item in data:
+                io.write(item)
+
+            return record(id, io.getvalue())
+
+    def as_binary(self) -> bytes:
+        sz = len(self.data)
+        return b"".join(
+            [
+                u2_p(self.rec_id) if self.rec_id & 0x80 else u1_p(self.rec_id),
+                b1_st_p(sz)
+                if sz < 0x80
+                else b2_st_p(sz & 0x7F | 0x80, sz >> 7)
+                if sz < 0x4000
+                else b3_st_p(sz & 0x7F | 0x80, (sz >> 7) & 0x7F | 0x80, sz >> 14)
+                if sz < 0x200000
+                else b4_st_p(
+                    sz & 0x7F | 0x80,
+                    (sz >> 7) & 0x7F | 0x80,
+                    (sz >> 14) & 0x7F | 0x80,
+                    sz >> 21,
+                ),
+                self.data,
+            ],
+        )
+
+    def dump(self, io: IO[bytes]) -> int:
+        io.write(self.as_binary())
+
+        return io.tell()
 
 
 if NUMBA_AVAILABLE:
