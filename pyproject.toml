@@ -1,7 +1,7 @@
 
 [project]
 name = "rxls"
-version = "0.2.0"
+version = "0.2.1"
 description = "Reading both XLSX and XLSB files, fast and memory-safe, into PyArrow."
 authors = [
     {name = "SaelKimberly", email = "sael.kimberly@yandex.ru"},
