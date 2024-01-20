@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 .pdm-python
 pdm.lock
+
+*.xlsx
+*.xlsb
+*.csv
