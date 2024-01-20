@@ -1,6 +1,7 @@
+# ruff: noqa:S101, PLR2004
 from io import BytesIO
 
-from ..rxls.record import record, dump_sz
+from ..rxls.biff import dump_sz, record, scan_biff
 
 
 def test_from_data() -> None:
@@ -11,7 +12,7 @@ def test_from_data() -> None:
 
 def test_from_io() -> None:
     with BytesIO(b"\x81\x03\x09some data") as io:
-        r = next(record.scan(io))
+        r = next(scan_biff(io))
     assert r.rec_id == 0x381
     assert r.data == b"some data"
 
@@ -45,10 +46,11 @@ def test_dump_and_read() -> None:
         r.dump(io)
         io.seek(0)
 
-        r_new = next(r.scan(io))
+        r_new = next(scan_biff(io))
 
     assert r == r_new
-    assert r.data == r_new.data and r.rec_id == r_new.rec_id
+    assert r.data == r_new.data
+    assert r.rec_id == r_new.rec_id
 
 
 def test_large_dump_and_read() -> None:
@@ -58,7 +60,8 @@ def test_large_dump_and_read() -> None:
         r.dump(io)
         io.seek(0)
 
-        r_new = next(r.scan(io))
+        r_new = next(scan_biff(io))
 
     assert r == r_new
-    assert r.data == r_new.data and r.rec_id == r_new.rec_id
+    assert r.data == r_new.data
+    assert r.rec_id == r_new.rec_id
