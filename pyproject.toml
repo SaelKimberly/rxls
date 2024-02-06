@@ -4,11 +4,6 @@ name = "rxls"
 version = "0.2.2"
 description = "Reading both XLSX and XLSB files, fast and memory-safe, into PyArrow."
 authors = [{ name = "SaelKimberly", email = "sael.kimberly@yandex.ru" }]
-[project.urls]
-Homepage = "https://github.com/SaelKimberly/rxls"
-Documentation = "https://github.com/SaelKimberly/rxls"
-Repository = "https://github.com/SaelKimberly/rxls.git"
-Issues = "https://github.com/SaelKimberly/rxls/issues"
 
 dependencies = [
     "recordclass>=0.21.1",
@@ -19,6 +14,13 @@ dependencies = [
 requires-python = ">=3.8"
 readme = "README.md"
 license = { text = "MIT" }
+
+[project.urls]
+Homepage = "https://github.com/SaelKimberly/rxls"
+Documentation = "https://github.com/SaelKimberly/rxls"
+Repository = "https://github.com/SaelKimberly/rxls.git"
+Issues = "https://github.com/SaelKimberly/rxls/issues"
+
 
 [project.optional-dependencies]
 performance = ["numba>=0.58.1", "tbb>=2021.11.0"]
