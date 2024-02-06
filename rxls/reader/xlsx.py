@@ -87,7 +87,7 @@ NUMERIC_STYLES = frozenset([0x01, 0x02, 0x03, 0x04, 0x25, 0x26, 0x27, 0x28, 0x30
 
 
 class XlsxWorkbook:  # noqa: D101
-    __slots__ = ("zf", "null_values", "null_shared", "__file", "__dict__")
+    __slots__ = ("__dict__", "__file", "null_shared", "null_values", "zf")
 
     def __init__(
         self,

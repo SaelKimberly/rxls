@@ -60,7 +60,7 @@ TEMPORAL_STYLES = frozenset(
 
 
 class XlsbWorkbook:  # noqa: D101
-    __slots__ = ("zf", "null_values", "null_shared", "__file", "__dict__")
+    __slots__ = ("__dict__", "__file", "null_shared", "null_values", "zf")
 
     def __init__(
         self,

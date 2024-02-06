@@ -86,7 +86,7 @@ class chunk:  # noqa: D101, N801
     ) = EMPTY_CHUNK
     "Chunk data. An `int` when type of chunk is `NULL`"
 
-    type: int = 0x00  # noqa: A003
+    type: int = 0x00
     "Type of chunk"
 
     size: int = 0
@@ -266,6 +266,7 @@ class chunk:  # noqa: D101, N801
         -------
         Self
             _description_
+
         """
         if self.type & TYPE_STRING:
             if isinstance(index, int):
@@ -357,6 +358,7 @@ class chunk:  # noqa: D101, N801
         Returns:
         -------
             Sequence[chunk]: Filtered sequence of chunks
+
         """
         result = []
         cum_len = 0
@@ -452,6 +454,7 @@ class chunk:  # noqa: D101, N801
         Returns:
         -------
             pa.Array -- pyarrow.Array
+
         """
         if offset or length or index is not None:
             chunks = chunk.take_over(chunks, offset, length, index)
@@ -473,7 +476,7 @@ class chunk:  # noqa: D101, N801
 
         utf8_fallback = False
 
-        if temp_idx:
+        if temp_idx:  # noqa: PLR1702
             if conf_to_datetime:
                 if nums_idx:
                     for i in nums_idx:

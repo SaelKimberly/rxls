@@ -2,7 +2,7 @@
 """BIFF12 PARSER"""
 from __future__ import annotations
 
-__all__ = ["record", "scan_biff", "dump_sz"]
+__all__ = ["dump_sz", "record", "scan_biff"]
 
 import os
 from io import BytesIO
@@ -107,7 +107,7 @@ class record:
         return io.tell()
 
 
-if NUMBA_AVAILABLE:
+if NUMBA_AVAILABLE:  # noqa: PLR1702
     import numba as nb
     import numpy as np
 

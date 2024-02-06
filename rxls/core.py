@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 __all__ = [
-    "POLARS_AVAILABLE",
     "NUMBA_AVAILABLE",
     "NUMBA_TBB_AVAILABLE",
-    "cached",
-    "as_dataclass",
-    "u4_u",
-    "u4_p",
-    "u2_p",
-    "u1_p",
-    "struct_u",
-    "struct_p",
-    "end_decl",
-    "Un",
-    "PaValue",
+    "POLARS_AVAILABLE",
     "PaArray",
+    "PaValue",
+    "Un",
+    "as_dataclass",
+    "cached",
+    "end_decl",
+    "struct_p",
+    "struct_u",
+    "u1_p",
+    "u2_p",
+    "u4_p",
+    "u4_u",
 ]
 
 import os
@@ -96,7 +96,7 @@ except ImportError:
 
     if PERFORMANCE_WARNINGS:
         warnings.warn(
-            "Numba acceleration of RXLS is unavailable (slowdown x4)",
+            "Numba CPU acceleration of RXLS is unavailable (slowdown x4)",
             UserWarning,
             stacklevel=2,
         )

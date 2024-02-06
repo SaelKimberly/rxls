@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 __all__ = [
-    "rk_to_f8",
-    "i8_to_rk",
-    "f8_to_rk",
-    "f8_to_ms_win",
-    "ms_to_f8_win",
-    "f8_is_i8",
-    "dt_has_d",
-    "dt_has_t",
+    "_strptime",
     "_unsafe_array",
     "_unsafe_arrow",
+    "_unsafe_bool_arrow_to_numpy",
     "_unsafe_data_to_array",
     "_unsafe_data_to_arrow",
-    "_unsafe_bool_arrow_to_numpy",
     "_unsafe_strings_to_array",
-    "_strptime",
+    "dt_has_d",
+    "dt_has_t",
+    "f8_is_i8",
+    "f8_to_ms_win",
+    "f8_to_rk",
+    "i8_to_rk",
     "mf_strptime",
+    "ms_to_f8_win",
+    "rk_to_f8",
 ]
 
 from typing import TYPE_CHECKING
@@ -50,6 +50,7 @@ def rk_to_f8(arr: NDArray[np.uint32]) -> NDArray[np.float64]:
     -------
     NDArray[np.float64]
         Float64 array
+
     """
     i_flag = arr & np.uint32(0b10)
     c_flag = ((arr & np.uint32(0b01)) * np.uint32(99) + np.uint32(1)).astype(np.float64)
@@ -83,6 +84,7 @@ def f8_to_ms_win(arr: NDArray[np.float64]) -> NDArray[np.int64]:
     -------
     NDArray[np.int64]
         Output Int64 array (milliseconds from 1970, UNIX timestamp)
+
     """
     # NOTE 1: 25_568 - actual days from 1900-01-01 to 1970-01-01
     # NOTE 2: 25_569 - actual days for backward compatibility reason (for dates greater or equal to 1900-03-01)
@@ -117,6 +119,7 @@ def ms_to_f8_win(arr: NDArray[np.int64]) -> NDArray[np.float64]:
     -------
     NDArray[np.float64]
         Output Float64 array (Days with fractions since 1900-01-01)
+
     """
     # NOTE: -2_203_891_200_000 == 1900-03-01 (milliseconds from 1970-01-01)
     # NOTE: 2_209_161_600_000 == 25569 days (milliseconds between 1900-01-01 and 1970-01-01 with fake 1900 leap year)
@@ -172,6 +175,7 @@ def f8_is_i8(arr: NDArray[np.float64], int_threshold: int) -> np.bool_:
     -------
     np.bool_
         Is rounded input potentially integer array, or not
+
     """
     return ~np.any(np.trunc(arr) != np.round(arr, int_threshold))
 
@@ -189,6 +193,7 @@ def dt_has_t(arr: NDArray[np.int64]) -> np.bool_:
     -------
     np.bool_
         Have any of this timestamps time part or not
+
     """
     return np.any(arr % np.uint64(86_400_000))
 
@@ -206,6 +211,7 @@ def dt_has_d(arr: NDArray[np.int64]) -> np.bool_:
     -------
     np.bool_
         Have any of this timestamps date part or not
+
     """
     return np.any(arr > np.uint64(86_400_000))
 
@@ -301,7 +307,7 @@ if NUMBA_AVAILABLE:
                 )
             ) / ms_per_dy
 
-        rk_to_f8 = nb.guvectorize(  # type: ignore  # noqa:F811
+        rk_to_f8 = nb.guvectorize(  # type: ignore
             [
                 nb.void(
                     nb.types.Array(nb.u4, 1, "C", True),
@@ -314,7 +320,7 @@ if NUMBA_AVAILABLE:
             cache=True,
         )(__gu_rk_to_f8)
 
-        f8_to_rk = nb.guvectorize(  # type: ignore  # noqa:F811
+        f8_to_rk = nb.guvectorize(  # type: ignore
             [
                 nb.void(
                     nb.types.Array(nb.f8, 1, "C", True),
@@ -327,7 +333,7 @@ if NUMBA_AVAILABLE:
             cache=True,
         )(__gu_f8_to_rk)
 
-        i8_to_rk = nb.guvectorize(  # type: ignore  # noqa:F811
+        i8_to_rk = nb.guvectorize(  # type: ignore
             [
                 nb.void(
                     nb.types.Array(nb.i8, 1, "C", True),
@@ -352,7 +358,7 @@ if NUMBA_AVAILABLE:
             cache=True,
         )(__gu_i8_to_rk)
 
-        f8_to_ms_win = nb.guvectorize(  # type: ignore  # noqa:F811
+        f8_to_ms_win = nb.guvectorize(  # type: ignore
             [
                 nb.void(
                     nb.types.Array(nb.f8, 1, "C", True),
@@ -365,7 +371,7 @@ if NUMBA_AVAILABLE:
             cache=True,
         )(__gu_f8_to_ms_win)
 
-        ms_to_f8_win = nb.guvectorize(  # type: ignore  # noqa:F811
+        ms_to_f8_win = nb.guvectorize(  # type: ignore
             [
                 nb.void(
                     nb.types.Array(nb.i8, 1, "C", True),
@@ -441,6 +447,7 @@ def _unsafe_array(arr: pa.Array, dtype: type[NT]) -> NDArray[NT]:
     -------
     NDArray[T]
         Numpy array of expected dtype
+
     """
     return np.frombuffer(arr.buffers()[-1], dtype)  # type: ignore
 
@@ -471,6 +478,7 @@ def _unsafe_arrow(
     -------
     pa.Array[T, pa.Scalar[T]]
         Arrow array of expected dtype
+
     """
     return from_buffers(dtype, len(arr), (None, pa.py_buffer(arr.data)), 0)
 
@@ -501,6 +509,7 @@ def _unsafe_data_to_arrow(
     -------
     pa.Array[T, pa.Scalar[T]]
         Arrow array of expected dtype
+
     """
     return from_buffers(
         dtype,
@@ -535,6 +544,7 @@ def _unsafe_data_to_array(
     -------
     NDArray[NT]
         Numpy array of expected dtype
+
     """
     return np.frombuffer(b"".join(data), dtype)
 
@@ -556,6 +566,7 @@ def _unsafe_bool_arrow_to_numpy(arr: pa.BooleanArray) -> NDArray[np.bool_]:
     -------
     NDArray[np.bool_]
         Output numpy boolean array
+
     """
     return np.unpackbits(np.frombuffer(arr.buffers()[-1], np.uint8))[-len(arr) :][  # type: ignore
         ::-1
@@ -585,6 +596,7 @@ def _unsafe_strings_to_array(
     -------
     NDArray[NT]
         Numpy array of expected dtype
+
     """
     raise NotImplementedError
 
@@ -597,6 +609,23 @@ if POLARS_AVAILABLE:
     DEFAULT_TIME_FORMATS: tuple[str, ...] = ("%T", "%R", "%r", "%I:%M %p", "%T%.f")
 
     def _strptime(arr: pa.Array, format: str, /) -> NDArray[np.int64]:
+        """
+        Use of Polars strptime functionality (see chrono crate for advanced info).
+
+        Faster and more flexible string to datetime parser.
+
+        Arguments:
+        ---------
+            arr: pa.Array
+                Strings Arrow array
+            format: str
+                Single possible format of timestamp
+
+        Returns:
+        -------
+            NDArray[np.int64] -- UNIX Timestamp (milliseconds since 1970-01-01)
+
+        """
         ret = _unsafe_array(
             pl.from_arrow(arr)
             .str.strptime(pl.Datetime("ms"), format, strict=False)  # type: ignore
@@ -612,6 +641,21 @@ else:
     )
 
     def _strptime(arr: pa.Array, format: str, /) -> NDArray[np.int64]:
+        """
+        Default pyarrow strptime (cannot parse milliseconds and AM/PM)
+
+        Arguments:
+        ---------
+            arr: pa.Array
+                Strings Arrow array
+            format: str
+                Single possible format of timestamp
+
+        Returns:
+        -------
+            NDArray[np.int64] -- UNIX Timestamp (milliseconds since 1970-01-01)
+
+        """
         ret = _unsafe_array(strptime(arr, format, "ms", True), np.int64)
         return np.where(ret < 0, ret % np.int64(86_400_000), ret)
 
@@ -676,6 +720,7 @@ def mf_strptime(
     ------
     pa.ArrowInvalid
         If one or more values cannot be recognized as temporal, using given formats.
+
     """
     result = np.repeat(np.int64(0), len(arr))
 

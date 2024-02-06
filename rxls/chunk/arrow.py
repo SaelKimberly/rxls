@@ -2,14 +2,14 @@ from __future__ import annotations
 
 __all__ = [
     "arrow_fn",
-    "unsafe_cast",
-    "strptime",
+    "from_buffers",
     "indices_nonzero",
+    "invert",
     "match",
     "or_",
-    "invert",
+    "strptime",
     "take",
-    "from_buffers",
+    "unsafe_cast",
 ]
 
 from typing import TYPE_CHECKING, Sequence

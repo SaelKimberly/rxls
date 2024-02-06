@@ -31,14 +31,14 @@ T_F8 = pa.float64()
 
 class xl_series:  # noqa: N801
     __slots__ = (
-        "__chunks",
-        "__chunk",
-        "__xdtr",
-        "__ch_off",
-        "__s_row",
-        "__e_row",
-        "__shared",
         "__binary",
+        "__ch_off",
+        "__chunk",
+        "__chunks",
+        "__e_row",
+        "__s_row",
+        "__shared",
+        "__xdtr",
         "_conf_to_datetime",
         "_conf_to_numerics",
         "_datetime_formats",

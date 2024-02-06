@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from functools import reduce
-
 __all__ = ["read"]
 
 import re
+from functools import reduce
 from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
@@ -297,7 +296,7 @@ def read(  # noqa: C901, PLR0914, PLR0912, PLR0915
 
     arrays = [columns[x].to_arrow(g_offset, g_length, idx=idx) for x in sorted(columns)]
 
-    if dtypes is not None:
+    if dtypes is not None:  # noqa: PLR1702
         if isinstance(dtypes, pa.DataType):
             for i in range(len(arrays)):
                 if arrays[i].type.id != dtypes.id:  # type: ignore

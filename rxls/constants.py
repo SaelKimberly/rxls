@@ -15,13 +15,13 @@ TYPE_NUMERIC with REPR_COMPILED -> ready to use pyarrow.Array
 
 
 __all__ = [
+    "REPR_PREPARED",
+    "REPR_RKNUMBER",
+    "REPR_SHARED",
+    "REPR_TEMPORAL",
     "TYPE_NULL",
     "TYPE_NUMERIC",
     "TYPE_STRING",
-    "REPR_SHARED",
-    "REPR_TEMPORAL",
-    "REPR_RKNUMBER",
-    "REPR_PREPARED",
 ]
 
 TYPE_NULL = 0x00
